@@ -8,7 +8,7 @@
         <link href="bootstrap/css/bootstrap.css" rel="stylesheet">
         <link href="assets/CSS/style.css" rel="stylesheet">
     </head>
-    <body>
+    <body onload="afficherCarte()">
         <div class="container">
         <!-- ====================================Sidebar================================ -->
             <div class="row">
@@ -20,12 +20,19 @@
                                     <img src="img/logo.png" />
                                 </a>
                             </li>
-                            <li class="spacer">Donnée Poubelle</li>
+                            <li class="spacer">Poubelle</li>
                             <li class="current">
                                 <a href="index.php" class="cur">Google Map</a>
                             </li>
                             <li>
-                                <a href="tableau.php">Tableau de données</a>
+                                <a href="tableau.php">Tableau de Poubelles</a>
+                            </li>
+                            <li class="spacer">Camion de ramassage</li>
+                            <li>
+                                <a href="Rajout_Poubelle.php">Ajout Camions</a>
+                            </li>
+                            <li>
+                                <a href="tableau_camion.php">Tableau de camions</a>
                             </li>
                         </ul>
                     </div>
@@ -40,7 +47,7 @@
                             &nbsp;
                             <div class="menu">
                                 <span class="lvertical"></span>
-                                <a href="">Aide</a>
+                                <a href="">Connexion</a>
                             </div>
                         </div>
                     </div>
@@ -48,9 +55,34 @@
                         <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                             <div class="widget totals">
                                 <h4 class="widget-title"><span>Carte de ramassage</span></h4>
-                                <div class="widget-content text-center">
+                                <div class="widget-content text-center" style="position:relative;">
+                                    <div style="margin-top:15px; margin-bottom:25px; float:left;">
+                                        <label>Selection du camion : </label>
+                                        <select onchange="numeroCamion(this);">
+                                            <?php
+                                                $monPDO = new PDO('mysql:host=127.0.0.1;dbname=Veolia;charset=utf8','root','');
+                                                $mabdd = $monPDO->query('SELECT * FROM `camion` ORDER BY `ID_Camion`');
+                                                $i=0;
+                                                while($mesdonnee = $mabdd->fetch())
+                                                {   
+                                                    if(isset($mesdonnee["ID_Camion"]) && isset($mesdonnee["Nom"]))
+                                                    {
+                                                        echo "<option name=\"camion".$i."\" value=\"".$mesdonnee["ID_Camion"]."\">".$mesdonnee["Nom"]."</option>";
+                                                    }
+                                                    $i++;
+                                                }
+                                                if($i == 0)
+                                                {
+                                                    echo "<option>Aucun</option>";
+                                                }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <div style="margin-top:15px; margin-bottom:25px; float:left;" id="test">
+                                    </div>
                                     <div id="map"></div>
                                     <div id="code_map"></div>
+                                    <div id="connexion_filaire"></div>
                                 </div>
                             </div>
                         </div>

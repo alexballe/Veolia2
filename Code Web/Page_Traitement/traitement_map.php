@@ -1,25 +1,28 @@
 <?php
 	$monPDO = new PDO('mysql:host=127.0.0.1;dbname=Veolia;charset=utf8','root','');
-	$mabdd = $monPDO->query('SELECT * FROM Etat');
+	$mabdd = $monPDO->query('SELECT * FROM `poubelle` , `trajet` WHERE `trajet`.`ID_Poubelle` = `poubelle`.`ID_Poubelle` AND `trajet`.`ID_Camion`= '.$_POST['camion']);
 	$i=0;
 	while($mesdonnee = $mabdd->fetch())
 	{	
-		if ($mesdonnee['% de remplissage'] > 75 || $mesdonnee['Poids'] > 5)
+		if ($mesdonnee['Remplissage'] > 75 || $mesdonnee['Poids'] > 5)
 		{
-			$ID[$i] = $mesdonnee['Identification'];
+			$ID[$i] = $mesdonnee['ID_Poubelle'];
 			$long[$i] = $mesdonnee['Longitude'];
 			$lat[$i] = $mesdonnee['Latitude'];
 			$Poids[$i] = $mesdonnee['Poids'];
-			$Remplissage[$i] = $mesdonnee['% de remplissage'];
-			$Ouverture[$i] = $mesdonnee["Frequence d'utilisation"];
+			$Remplissage[$i] = $mesdonnee['Remplissage'];
+			$Ouverture[$i] = $mesdonnee["Frequence_utilisation"];
 			$i++;
 		}
 	}
 ?>
+
 <div id="code_map">
 
 	<?php	
-		echo "<div class =\"poubaffiche\"><p>Point de départ A : Centre de traitement</p>Nombre total de poubelle pleine : ".$i."</div>"; 
+		//
+		echo "<div class =\"poubaffiche\"><p>Point de départ A : Centre de traitement</p>Nombre total de poubelle pleine : ".$i."</div>
+		<div id=\"directions_panel\"></div>"; 
 	?>
 	<script>
 //-----------------------------------------------------------------------------------------------------------		
@@ -29,9 +32,16 @@
 		var long = new Array();
 		var tableauMarqueurs = new Array();
 		var contentString = new Array();
+		
+		//Reset de l'itineraire
+		if (directionsDisplay != null) {
+		    directionsDisplay.setMap(null);
+		    directionsDisplay = null;
+		}
+
 		var directionsDisplay = new google.maps.DirectionsRenderer();
 		var directionsService = new google.maps.DirectionsService();
-		var i = 0, marqueur, maCarte, infowindow, zoneMarqueurs, request, content, j = 0, point = 1, infopoint = 1;
+		var i = 0, marqueur, maCarte, infowindow, request, content, j = 0, point = 1, infopoint = 1;
 		
 		<?php 	
 
@@ -66,27 +76,12 @@
 	
 //------------------------------------------------------------------------------------------------------------
 
-		//Creation d'une carte Google Map
-		maCarte = new google.maps.Map( document.getElementById("map"), {
-			zoom: 13,
-			center: tableauMarqueurs[0],
-			mapTypeId: google.maps.MapTypeId.ROADMAP
-		});
-
 		//Creation d'une bulle d'info de marker
 		infowindow = new google.maps.InfoWindow();  
 
 		if (tableauMarqueurs.length > 1)
 		{
 			directionsDisplay.setMap(maCarte);
-
-			//Creation d'une zone de marker
-			zoneMarqueurs = new google.maps.LatLngBounds();
-
-			request = {
-	            travelMode: google.maps.TravelMode.DRIVING, // route / voiture
-	            optimizeWaypoints : true
-	        };
 	    }
 
 
@@ -99,27 +94,13 @@
 			marqueur = new google.maps.Marker({
 				position: tableauMarqueurs[i]
 			});
-			
-			//Si il y a plus d'un marqueur 
-			if (tableauMarqueurs.length > 1)
-			{
-				//Creation d'une zone 
-				zoneMarqueurs.extend( marqueur.getPosition() );
-			}
+
 
 //-----------------------------------------------------------------------------------------------------------
 
 	 		//Si il n'y qu'un point, on affiche qu'un marqueur sans itinéraire
 	 		if (tableauMarqueurs.length == 1)
 	 		{
-
-	 			//Creation de la Google Map pour un seul marker
-	 			maCarte = new google.maps.Map( document.getElementById("map"), 
-	 			{
-					zoom: 13,
-					center: tableauMarqueurs[i],
-					mapTypeId: google.maps.MapTypeId.ROADMAP
-				});
 
  				//Creation du marqueur
 	            marqueur = new google.maps.Marker(
@@ -174,16 +155,74 @@
 		//Si il y a plus d'un marqueur
 		if (tableauMarqueurs.length > 1)
 		{
+			var duration = new Array();
+			var distance = new Array();
 
 			//Creation de l'itinéraire 
 			directionsService.route(request, function(result, status) {
-		        if (status == google.maps.DirectionsStatus.OK) {
+		        if (status == google.maps.DirectionsStatus.OK) 
+		        {
 		            directionsDisplay.setDirections(result);
+		            var route = result.routes[0];
+                    var summaryPanel = document.getElementById('directions_panel');
+                    summaryPanel.innerHTML = '';
+
+                    var compteur=0;
+                    var dist = new Array();
+                    var dur = new Array();
+                    var m = 0;
+                    var p = 0;
+                    var DistanceMax = 0;
+                    var DurationMax = 0;
+                    // For each route, display summary information.
+                    for(var i = 0; i < route.legs.length; i++) 
+                    {
+                        distance[i] = route.legs[i].distance.text;
+                        duration[i] = route.legs[i].duration.text;
+
+                        distance[i] = distance[i].replace(/,/i, '.');
+                        for(var j = 0; j < distance[i].length; j++)
+	                    {
+	                    	if(distance[i][j] == " ")
+	                    	{
+	                    		dist[m] = distance[i].substr(0, j);
+	                    		m++;
+	                    	}
+	                    }
+
+	                   	for(var l = 0; l < duration[i].length; l++)
+	                    {                   	
+	                    	if(duration[i][l] == "m")
+	                    	{
+	                    		dur[p] = duration[i].substr(0, l);                  		
+	                    		p++;
+	                    	}else if(duration[i][l] == "h")
+	                    	{
+	                    		var heure = duration[i].substr(0, l);
+	                    		var min = duration[i].substr(8, 2);
+	                    		var temp = heure*60;
+	                    		dur[p] = parseFloat(temp) + parseFloat(min);
+	                    		p++;
+	                    	}
+	                    }
+	                    compteur++;
+                    }                    
+
+                    for(var j = 0; j < compteur; j++)
+                    {
+                    	DistanceMax += parseFloat(dist[j]);
+                    	DurationMax += parseFloat(dur[j]);
+                    }
+                    var DurationHeure = 0;
+                    while (DurationMax > 60)
+                    {
+                    	DurationHeure++;
+                    	DurationMax-=60;
+                    }
+                    summaryPanel.innerHTML += '<p>Distance : ' + DistanceMax + ' km</p>';
+                    summaryPanel.innerHTML += 'Durée : ' + DurationHeure + ' h ' + DurationMax + ' min';
 		        }
 		    });
-		
-			//zoom sur tout les marqueurs afficher sur la map  
-	    	maCarte.fitBounds( zoneMarqueurs );
 	    }
 
 //-----------------------------------------------------------------------------------------------------------
